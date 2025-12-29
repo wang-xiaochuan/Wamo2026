@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>706 Tech & Humanities Camp Deck - Maritime Odyssey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --text-main: #e0e0e0;
+            --accent-color: #00ff41; 
+            --accent-variant: #10b981; 
+            --slide-width: 1280px;
+            --slide-height: 720px;
+        }
+
+        body {
+            background-color: #000;
+            color: var(--text-main);
+            font-family: 'Noto Sans SC', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* 1. Canvas for Data Flow Particles (Background) */
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* Scanline Overlay */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.3;
+        }
+
+        /* Slide Container */
+        #deck-container {
+            width: var(--slide-width);
+            height: var(--slide-height);
+            background-color: var(--bg-color);
+            position: relative;
+            box-shadow: 0 0 0 1px #333; 
+            overflow: hidden;
+        }
+
+        /* Slide Transition Animation: "Decode-In" */
+        @keyframes decode-in {
+            0% { 
+                opacity: 0; 
+                clip-path: inset(40% 0 40% 0); /* Start as a thin horizontal strip */
+                transform: scale(1.1); 
+                filter: brightness(2) contrast(2); /* Flash bright */
+            }
+            40% {
+                opacity: 1;
+                clip-path: inset(0 0 0 0); /* Expand fully */
+                filter: brightness(1.2);
+            }
+            100% { 
+                transform: scale(1); 
+                filter: none; 
+            }
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            padding: 4rem 5rem;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            /* Apply the transition animation */
+            animation: decode-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Typography */
+        h1, h2, h3, .mono-font { font-family: 'JetBrains Mono', monospace; }
+        .serif-font { font-family: 'Noto Serif SC', serif; }
+
+        h1 { font-size: 3.5rem; font-weight: 700; margin-bottom: 1rem; color: #fff; text-transform: uppercase; letter-spacing: -2px; }
+        h2 { font-size: 2rem; color: var(--accent-color); margin-bottom: 2rem; border-left: 5px solid var(--accent-color); padding-left: 1rem; text-transform: uppercase; }
+        p { font-size: 1rem; line-height: 1.6; color: #ccc; }
+        .text-en-sub { display: block; font-size: 0.8rem; color: #666; margin-top: 0.3rem; font-family: 'JetBrains Mono', monospace; }
+
+        /* Terminals & Boxes */
+        .terminal-box { border: 1px solid #333; background: rgba(0, 20, 0, 0.3); padding: 2rem; position: relative; }
+        .terminal-box::after { content: ""; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px; border-bottom: 2px solid var(--accent-color); border-right: 2px solid var(--accent-color); }
+        .tag { background: var(--accent-color); color: #000; padding: 2px 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; display: inline-block; margin-bottom: 1rem; text-transform: uppercase; }
+        .quote-box { border: 1px dashed #444; padding: 2rem; margin: 2rem 0; background: rgba(255,255,255,0.02); position: relative; }
+        .quote-box::before { content: "QUOTE_BLOCK //"; position: absolute; top: -10px; left: 10px; background: var(--bg-color); padding: 0 5px; color: #555; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+        
+        /* Lists */
+        ul.console-list li { margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace; border-bottom: 1px solid #1a1a1a; padding-bottom: 1rem; }
+        ul.console-list li strong { color: var(--accent-color); display: block; margin-bottom: 0.3rem; }
+        
+        /* Timeline */
+        .timeline-item { position: relative; padding-left: 2rem; margin-bottom: 2rem; border-left: 1px solid #333; }
+        .timeline-item::before { content: ""; position: absolute; left: -5px; top: 0; width: 9px; height: 9px; background: #000; border: 1px solid var(--accent-color); }
+
+        /* Controls */
+        .controls { position: fixed; bottom: 30px; right: 40px; z-index: 100; display: flex; gap: 10px; }
+        .btn-control { background: #000; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 5px 15px; font-family: 'JetBrains Mono', monospace; cursor: pointer; text-transform: uppercase; font-size: 0.8rem; transition: all 0.2s; }
+        .btn-control:hover { background: var(--accent-color); color: #000; box-shadow: 0 0 10px var(--accent-color); }
+        
+        /* Slide Indicator - Moved to TOP */
+        .slide-indicator { 
+            position: absolute; 
+            top: 2rem; /* Top position */
+            left: 50%; 
+            transform: translateX(-50%); 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 0.8rem; 
+            color: #555; 
+            z-index: 50; 
+            background: rgba(0,0,0,0.8); 
+            padding: 4px 12px; 
+            border: 1px solid #333; 
+            border-radius: 2px;
+            letter-spacing: 2px;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; }
+
+        /* Special Styling for Slide 3 - AoE Style */
+        .weight-box {
+            border-left: 2px solid #333;
+            padding-left: 1.5rem;
+            transition: all 0.3s;
+            opacity: 0.4;
+            transform: translateX(0);
+        }
+        .weight-box.active {
+            border-left: 4px solid var(--accent-variant);
+            opacity: 1;
+            transform: translateX(10px);
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent);
+        }
+        .weight-box h4 { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--accent-variant); margin-bottom: 0.2rem; }
+        .weight-box p { font-size: 0.8rem; line-height: 1.4; color: #ccc; }
+        .weight-box .highlight { color: #fff; font-weight: bold; text-shadow: 0 0 5px rgba(255,255,255,0.3); }
+
+        /* Guest Grid Style */
+        .guest-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.2rem;
+            align-content: start;
+        }
+        .guest-card {
+            border-left: 1px solid #333;
+            padding-left: 1rem;
+            transition: border-color 0.3s;
+            padding-bottom: 0.5rem;
+        }
+        .guest-card:hover {
+            border-left-color: var(--accent-color);
+        }
+        .guest-name {
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            display: block;
+        }
+        .guest-name-en {
+            color: #666;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            display: block;
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+        }
+        .guest-title {
+            color: #aaa;
+            font-size: 0.8rem;
+            line-height: 1.3;
+            display: block;
+        }
+        .guest-title-en {
+            color: #555;
+            font-size: 0.7rem;
+            line-height: 1.2;
+            display: block;
+            margin-top: 0.1rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    
+    <div id="deck-container">
+        <div class="slide-indicator" id="slideNumber">PAGE: 01 / 18</div>
+
+        <!-- Particle Canvas -->
+        <canvas id="particle-canvas"></canvas>
+
+        <!-- Slide 1: Cover -->
+        <div class="slide active" style="justify-content: center;">
+            <div class="mb-4"><span class="tag">System.Init: Residency</span></div>
+            <h1 style="font-size: 4rem;">706 Tech &<br>Humanities Camp</h1>
+            <h2 style="font-size: 1.5rem; color: #fff; border: none; padding: 0; margin-top: 1rem; opacity: 0.8; font-weight: 400;">706 科技人文营地</h2>
+            <div class="mt-8 p-4 border-l-2 border-gray-700 max-w-2xl bg-black/50 backdrop-blur-sm">
+                <p class="text-xl text-white font-mono mb-2">“未来已经发生，我们正在练习如何作为人生活其中。”</p>
+                <span class="text-en-sub">> The future has already taken place. Executing human_adaptation.exe...</span>
+            </div>
+            <div class="absolute bottom-12 left-20 right-20 flex justify-between font-mono text-sm text-gray-500 border-t border-gray-800 pt-4">
+                <span>LOC: Chiang Mai / 4Seas</span><span>DATE: Jan 22-27, 2026</span><span>STATUS: Wamo Sub-Event</span>
+            </div>
+        </div>
+
+        <!-- Slide 2: Genesis -->
+        <div class="slide" style="justify-content: center;">
+            <h2>> 缘起 / Genesis_Log</h2>
+            <div class="grid-2">
+                <div class="space-y-8">
+                    <div>
+                        <p class="text-white font-serif text-lg leading-relaxed mb-2 tracking-wide">古希腊的英雄奥德修斯，在海路被封锁之际，<br>在喀耳刻的建议中进入冥界寻求指引。</p>
+                        <p class="text-gray-500 font-mono text-xs leading-relaxed border-l-2 border-gray-800 pl-3">When the seas were sealed, Odysseus entered the Underworld.<br><span class="text-gray-400">He had to enter the realm of the dead, for the world of the living could no longer guide him.</span></p>
+                    </div>
+                    <div>
+                        <p class="text-white font-serif text-lg leading-relaxed mb-2 tracking-wide">今天，我们站在一个类似的时刻。<br>技术不再只决定生死，而开始接管判断、重塑关系。</p>
+                        <p class="text-gray-500 font-mono text-xs leading-relaxed border-l-2 border-gray-800 pl-3">Today, we stand at a similar juncture.<br>Tech no longer just decides life; it <span class="text-accent-color">takes over judgment</span> and reshapes relationships.</p>
+                    </div>
+                    <div>
+                        <p class="text-white font-serif text-lg leading-relaxed mb-2 tracking-wide">只有越过这条冥河，才能获得一线生机。<br>这不是承诺彼岸的救赎，而是承认此岸已无法维持。</p>
+                        <p class="text-gray-500 font-mono text-xs leading-relaxed border-l-2 border-gray-800 pl-3">"Only by crossing the Styx can we find survival."<br>Not a promise of salvation, but an admission that <span class="text-accent-color">this shore is unsustainable</span>.</p>
+                    </div>
+                </div>
+                <div class="space-y-8 flex flex-col justify-center">
+                    <div>
+                        <p class="text-white font-serif text-lg leading-relaxed mb-2 tracking-wide">我们被迫进入边界地带，去询问那些已经付出代价的存在。<br><span class="text-gray-400 text-base">那些关于天堂的幻想，制度、理想和乌托邦。</span></p>
+                        <p class="text-gray-500 font-mono text-xs leading-relaxed border-l-2 border-gray-800 pl-3">Forced into the <span class="text-accent-color">liminal zone</span>, to question the buried past.<br>The 20th century's institutions, ideals, and utopias.</p>
+                    </div>
+                    <div class="bg-white/5 p-6 border border-gray-800 relative overflow-hidden group hover:border-accent-color transition-colors duration-500">
+                        <div class="absolute top-0 right-0 p-2 opacity-10 font-mono text-4xl text-white pointer-events-none">}</div>
+                        <p class="text-white font-serif text-xl italic mb-4 z-10 relative">“如果我们还能从冥河中返回，<br>那并不是因为我们看见了一个完美的未来，<br>而是因为我们从冥界里，<br>带回了继续前行所必需的判断。”</p>
+                        <div class="h-px w-full bg-gray-700 mb-4"></div>
+                        <p class="text-gray-400 font-mono text-xs z-10 relative leading-relaxed">"If we return, it is not because we glimpsed a perfect future,<br>but because we brought back the <span class="text-accent-color font-bold">JUDGMENT</span> necessary to move forward."</p>
+                        <div class="mt-6 flex justify-between items-end"><span class="text-white font-serif text-sm">现在，穿越这冥河。</span><span class="text-accent-color font-mono text-xs blinking-cursor">>> EXECUTE: FIND_DIRECTION_</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: The Weights (Maritime Odyssey) -->
+        <div class="slide" style="justify-content: center;">
+            <h2>> 人文的重量 / The_Weight_of_Humanities</h2>
+            <div class="grid-2" style="grid-template-columns: 1.3fr 1fr; align-items: start;">
+                <div class="relative h-full border border-gray-800 bg-[#080810]">
+                    <div class="absolute top-0 left-0 w-full h-8 bg-[#111122] border-b border-gray-700 flex items-center px-3 justify-between z-10"><span class="font-mono text-xs text-blue-400">MAP: MYTHIC_SEA.scx</span><span class="font-mono text-xs text-green-500" id="iso-status">AGE: NAVIGATION</span></div>
+                    <canvas id="aoe-canvas" width="650" height="500" class="block w-full h-full"></canvas>
+                    <div class="absolute bottom-4 left-4 right-4 bg-black/80 border border-gray-600 p-3 pointer-events-none" id="iso-caption"><p class="text-green-500 font-mono text-xs mb-1">>> OBJECTIVE UPDATED:</p><p class="text-white font-serif text-sm">Loading Terrain...</p></div>
+                </div>
+                <div class="flex flex-col h-full justify-between py-2 pl-4">
+                    <div class="weight-box active" id="wb-0"><div class="flex justify-between"><h4>01 // BOUNDARY (边界)</h4><span class="text-xs text-gray-500">[REEFS]</span></div><p class="mt-1"><span class="highlight">人文的第一重量是“禁止穿越的线”。</span><br>不是最优航线，而是危险的暗礁。当AI生成计划时，人文逼问：哪里不可航行？</p></div>
+                    <div class="weight-box" id="wb-1"><div class="flex justify-between"><h4>02 // COST (代价)</h4><span class="text-xs text-gray-500">[FLOTSAM]</span></div><p class="mt-1"><span class="highlight">人文的第二重量是“把代价说清楚”。</span><br>技术掩盖沉没成本。人文拒绝把代价当作海浪。只要“有效”就不必回答“谁在沉没”？</p></div>
+                    <div class="weight-box" id="wb-2"><div class="flex justify-between"><h4>03 // RESTRAINT (节制)</h4><span class="text-xs text-gray-500">[SIRENS]</span></div><p class="mt-1"><span class="highlight">人文的第三重量是“避免失控”。</span><br>塞壬的歌声不是坏，而是把短期收益包装得太迷人。人文恢复一种能力：克制的航行。</p></div>
+                    <div class="weight-box" id="wb-3"><div class="flex justify-between"><h4>04 // SOBRIETY (清醒)</h4><span class="text-xs text-gray-500">[CONSTELLATION]</span></div><p class="mt-1"><span class="highlight">人文的第四重量不是知识，是“清醒”。</span><br>在无尽的洋面上重建星图坐标。信息如海水般涌来，但清醒的判断是罗盘。</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Eco Position -->
+        <div class="slide">
+            <h2>> 生态位 / Eco_Position</h2>
+            <div class="grid-2">
+                <!-- Left: WAMO -->
+                <div class="flex flex-col justify-between h-full">
+                    <div>
+                        <div class="text-accent-color font-mono text-xs mb-4 border border-accent-color p-2 inline-block"><pre style="margin:0; line-height:1;"> __      __   _   __  __  ___  
+ \ \    / /  /_\ |  \/  |/ _ \ 
+  \ \/\/ /  / _ \| |\/| | (_) |
+   \_/\_/  /_/ \_\_|  |_|\___/ 
+   [ REALITY_PROTOCOL_2026 ]</pre></div>
+                        <h3 class="text-white text-2xl font-bold mb-4">共享现实实验<br><span class="text-lg font-normal text-gray-400 font-mono">A Shared Reality Experiment</span></h3>
+                        <div class="text-sm text-gray-300 font-mono space-y-4 leading-relaxed">
+                            <div><span class="text-accent-color block mb-1">> The Problem (问题):</span><p class="text-white mb-1">随着AI加速认知，稀缺的不再是工具，而是信任、协作与意义。</p></div>
+                            <div><span class="text-accent-color block mb-1">> The Response (回应):</span><p class="text-white mb-1">人类的未来应由人类决定。在真实城市中，探索如何再次共存。</p></div>
+                            <div><span class="text-accent-color block mb-1">> The Structure (结构):</span><p class="text-white mb-1">无中心，无观众，只有节点。清迈全城即自组织营地 (WACAs)。</p></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 border-t border-gray-800 pt-4"><span class="text-xs font-mono text-gray-500 block mb-2">TARGET_THEMES:</span><div class="flex flex-wrap gap-2"><span class="tag" style="background:#333;color:#fff;font-size:0.6rem;">AI與社会</span><span class="tag" style="background:#333;color:#fff;font-size:0.6rem;">科技人文</span><span class="tag" style="background:#333;color:#fff;font-size:0.6rem;">共居实验</span><span class="tag" style="background:#333;color:#fff;font-size:0.6rem;">长寿科技</span></div></div>
+                </div>
+                <!-- Right: 706 & ETH -->
+                <div class="flex flex-col gap-4 h-full">
+                    <div class="terminal-box flex-1 flex flex-col justify-center border-white/40">
+                         <h3 class="text-white border-b border-gray-700 pb-2 mb-2 font-mono text-sm">> INITIATOR_NODE: 706 YOUTH SPACE</h3>
+                         <div class="flex items-start gap-4 mb-2"><div class="text-4xl font-bold text-white tracking-tighter">706</div><div><strong class="text-white block text-md">中国最早的自治青年空间</strong><span class="text-xs text-gray-500 font-mono">China's First Autonomous Youth Space (Since 2012)</span></div></div>
+                         <div class="text-sm text-gray-300 font-mono leading-relaxed space-y-2"><p><span class="text-accent-color">> Origin:</span> 起源于北京五道口，现已成为全球分布式的青年自治网络。</p><p><span class="text-accent-color">> Mission:</span> 探索生活的不同可能性。连接孤岛，重建公共生活。</p></div>
+                    </div>
+                    <div class="terminal-box flex-1 flex flex-col justify-center opacity-80 hover:opacity-100 transition-opacity">
+                        <h3 class="text-gray-400 border-b border-gray-800 pb-2 mb-2 font-mono text-sm">> HOST_LAYER: ETH CHIANG MAI</h3>
+                        <div class="mb-2"><strong class="text-white block mb-1">以太坊的快闪城市</strong><span class="text-xs text-gray-500 font-mono block">A Pop-Up City for Ethereum Builders</span></div>
+                        <div class="p-2 bg-white/5 border-l-2 border-gray-600"><p class="text-xs text-gray-300"><span class="text-accent-color">> RELATIONSHIP:</span> WAMO 运行在 ETH Chiang Mai 的基础设施之上，为其注入人文与社会实验的维度。</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: TL;DR -->
+        <div class="slide">
+            <h2>> 项目概要 / TL;DR</h2>
+            <div class="grid-2">
+                <div class="terminal-box">
+                    <h3 class="text-accent-color mb-4 border-b border-gray-800 pb-2">SYSTEM_CONTEXT</h3>
+                    <ul class="console-list">
+                        <li><strong>> Context: Chiang Mai Tech Month</strong><div class="font-mono text-sm leading-relaxed mt-2 text-gray-300"><span class="text-gray-500">root:</span> ETH Chiang Mai<br><span class="text-gray-500">&nbsp;└── parent:</span> Wamo Summit<br><span class="text-accent-color">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── node:</span> 706 Tech & Humanities</div></li>
+                        <li><strong>> Mission_01: Reflection Layer</strong><span class="text-en-sub">Adding a critical reflection layer to the tech surge.</span></li>
+                        <li><strong>> Mission_02: Deep_Linkage</strong><span class="text-en-sub">Bridging scholars with Web3 & AI communities.</span></li>
+                        <li><strong>> Timeframe: Jan 22 - Jan 27</strong><span class="text-en-sub">Syncing with Wamo Summit schedule.</span></li>
+                    </ul>
+                </div>
+                <div class="pl-4 flex flex-col justify-center">
+                    <div class="quote-box"><p class="mb-2 text-white">"它不仅仅是大会，也不仅仅是论坛，而是一个在有限时间内思考可能性的场域。"</p><span class="text-en-sub">> Not just a conference, nor just a forum. A field to explore possibilities.</span></div>
+                    <div class="mt-4"><h3 class="text-accent-color font-mono text-sm uppercase mb-2">>> Core_Modules</h3><ul class="text-sm font-mono text-gray-400 space-y-2"><li><span class="text-accent-color">[1]</span> Deep-Dive Panels (白天对谈)</li><li><span class="text-accent-color">[2]</span> Town Halls (晚上社区问答)</li><li><span class="text-accent-color">[3]</span> Low-structure Living (低结构共居)</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6 (NEW): Strategic Map -->
+        <div class="slide">
+            <h2>> 战略部署 / Strategic_Map</h2>
+            <div class="grid-2" style="grid-template-columns: 2fr 1fr;">
+                <!-- Map Canvas Container -->
+                <div class="relative h-full border border-gray-800 bg-[#050505]">
+                    <!-- Overlay Grid -->
+                    <div class="absolute inset-0 z-10 pointer-events-none" 
+                         style="background-image: linear-gradient(rgba(0, 255, 65, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 65, 0.05) 1px, transparent 1px); background-size: 40px 40px;">
+                    </div>
+                    
+                    <canvas id="location-canvas" width="800" height="500" class="block w-full h-full"></canvas>
+                    
+                    <!-- Radar Sweep Line -->
+                    <div id="radar-sweep" class="absolute top-0 left-0 w-full h-1 bg-accent-color opacity-50 shadow-[0_0_15px_#00ff41] z-20 pointer-events-none" style="animation: scan 4s linear infinite;"></div>
+                    
+                    <style>
+                        @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { top: 100%; opacity: 0; } }
+                    </style>
+                </div>
+
+                <!-- Legend / Context -->
+                <div class="flex flex-col justify-center pl-4 space-y-6">
+                    <div class="terminal-box">
+                        <strong class="text-accent-color block mb-2 border-b border-gray-700 pb-1">>> ENVIRONMENT_SCAN</strong>
+                        
+                        <!-- Climate -->
+                        <div class="mb-4">
+                            <strong class="text-white text-xs block mb-1">[CLIMATE] 宜人暖冬</strong>
+                            <p class="text-xs text-gray-400">
+                                1月均温 15-28°C，清爽干燥。<br>
+                                全球数字游民的首选过冬地。
+                            </p>
+                        </div>
+
+                        <!-- Logistics -->
+                        <div class="mb-4">
+                            <strong class="text-white text-xs block mb-1">[LOGISTICS] 极速接入</strong>
+                            <p class="text-xs text-gray-400">
+                                机场至会场仅需 <span class="text-accent-color">15分钟车程</span>。<br>
+                                交通极其便利。
+                            </p>
+                        </div>
+
+                        <!-- Lifestyle -->
+                        <div>
+                            <strong class="text-white text-xs block mb-1">[LIFESTYLE] 生活配套</strong>
+                            <p class="text-xs text-gray-400">
+                                古城夜市、咖啡馆与各类生活设施触手可及。<br>
+                                享受高性价比的旅居体验。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-4 h-4 bg-accent-color shadow-[0_0_10px_#00ff41]"></div>
+                            <div>
+                                <strong class="text-white text-sm block">WAMO / 706 CAMP</strong>
+                                <span class="text-xs text-gray-500 font-mono">HQ: One Nimman Area</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-4 h-4 border-2 border-blue-500"></div>
+                            <div>
+                                <strong class="text-white text-sm block">清迈古城 (Old City)</strong>
+                                <span class="text-xs text-gray-500 font-mono">Historical Center</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-4 h-4 rounded-full border border-purple-500 bg-purple-900/50"></div>
+                            <div>
+                                <strong class="text-white text-sm block">清迈大学 (CMU)</strong>
+                                <span class="text-xs text-gray-500 font-mono">Academic Hub</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Vision -->
+        <div class="slide">
+            <h2>> 愿景与板块 / Vision & Modules</h2>
+            <div class="quote-box"><p>“在某些地方，未来已经发生，但我们也许还没有知晓生活在其中的方法。”</p><span class="text-en-sub">> "The future has already happened, but we may not yet know how to live in it."</span></div>
+            <div class="flex flex-col gap-6 mt-4">
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="terminal-box hover:bg-white/5 transition-colors flex flex-col"><span class="text-xs font-mono text-gray-500 block mb-2">MOD_01 // SYSTEM</span><h3 class="text-white text-md font-bold mb-2 leading-tight">Tech & Judgment<br>技术与判断</h3><p class="text-xs text-gray-400 leading-relaxed">算法与大数据如何通过微观决策影响宏观命运？当判断力被系统外包，我们是否正在失去作为道德主体的资格？</p></div>
+                    <div class="terminal-box hover:bg-white/5 transition-colors flex flex-col"><span class="text-xs font-mono text-gray-500 block mb-2">MOD_02 // SPEED</span><h3 class="text-white text-md font-bold mb-2 leading-tight">Accelerationism & Shock<br>加速主义与冲击</h3><p class="text-xs text-gray-400 leading-relaxed">“更快”是方案还是问题的根源？探讨技术加速背后的剧烈社会变动，以及个体在系统中承受的隐形冲击。</p></div>
+                    <div class="terminal-box hover:bg-white/5 transition-colors flex flex-col"><span class="text-xs font-mono text-gray-500 block mb-2">MOD_03 // CONNECT</span><h3 class="text-white text-md font-bold mb-2 leading-tight">Intimacy, Trust & Algorithm<br>亲密关系、信任与算法</h3><p class="text-xs text-gray-400 leading-relaxed">技术是重塑了身份，还是将其碎片化？在算法中介的时代，信任与亲密关系是否正演变为一种计算协议？</p></div>
+                </div>
+                <div class="grid grid-cols-2 gap-6 w-5/6 mx-auto">
+                    <div class="terminal-box hover:bg-white/5 transition-colors flex flex-col"><span class="text-xs font-mono text-gray-500 block mb-2">MOD_04 // VALUE</span><h3 class="text-white text-md font-bold mb-2 leading-tight">Labor, Meaning & Automation<br>劳动、意义与自动化</h3><p class="text-xs text-gray-400 leading-relaxed">当自动化彻底释放生产力，劳动不再是社会价值的锚点。我们如何在无工可作或无意义劳动的时代，重构经济模式与自我认同？</p></div>
+                    <div class="terminal-box hover:bg-white/5 transition-colors flex flex-col"><span class="text-xs font-mono text-gray-500 block mb-2">MOD_05 // FUTURE</span><h3 class="text-white text-md font-bold mb-2 leading-tight">China as the Future of Humanity<br>中国作为未来人类的一种范式</h3><p class="text-xs text-gray-400 leading-relaxed">中国的高压强、高动员技术环境，并非孤立的地区现象，而是全球技术文明发展的一种“极端预演”与未来隐喻。</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Agenda -->
+        <div class="slide">
+            <h2>> 每日议程 / Daily_Agenda.log</h2>
+            <div class="grid-2" style="grid-template-columns: 2fr 1fr;">
+                <div class="terminal-box" style="height: 100%; overflow-y: auto;">
+                    <h3 class="text-accent-color border-b border-gray-800 pb-2 mb-4 font-mono text-sm">>> EXECUTION_QUEUE [JAN 22 - 27]</h3>
+                    <div class="mb-6 border-l-2 border-gray-700 pl-4"><span class="font-mono text-xs text-accent-color block">JAN_22 [DAY_01]</span><strong class="text-white text-lg block">Tech & Judgment (技术与判断)</strong><p class="text-xs text-gray-500 font-mono mt-1">> EVENING: Town Hall (Judgment Systems)</p></div>
+                    <div class="mb-6 border-l-2 border-gray-700 pl-4"><span class="font-mono text-xs text-accent-color block">JAN_23 [DAY_02]</span><strong class="text-white text-lg block">Accelerationism & Shock (加速主义与冲击)</strong><p class="text-xs text-gray-500 font-mono mt-1">> EVENING: Town Hall (Pain & Speed)</p></div>
+                    <div class="mb-6 border-l-2 border-gray-700 pl-4"><span class="font-mono text-xs text-accent-color block">JAN_24 [DAY_03]</span><strong class="text-white text-lg block">Intimacy, Trust & Algorithm (亲密关系、信任与算法)</strong><p class="text-xs text-gray-500 font-mono mt-1">> EVENING: Town Hall (Digital Love)</p></div>
+                    <div class="mb-6 border-l-2 border-gray-700 pl-4"><span class="font-mono text-xs text-accent-color block">JAN_25 [DAY_04]</span><strong class="text-white text-lg block">Labor, Meaning & Automation (劳动、意义与自动化)</strong><p class="text-xs text-gray-500 font-mono mt-1">> EVENING: Town Hall (Post-Work)</p></div>
+                    <div class="mb-6 border-l-2 border-gray-700 pl-4"><span class="font-mono text-xs text-accent-color block">JAN_26 [DAY_05]</span><strong class="text-white text-lg block">China as the Future of Humanity (中国作为未来人类的一种范式)</strong><p class="text-xs text-gray-500 font-mono mt-1">> EVENING: Final Town Hall</p></div>
+                </div>
+                <div class="flex flex-col justify-center pl-4">
+                    <div class="quote-box"><p class="text-lg text-white mb-2">"下午论坛对话，晚上社区讨论"</p><span class="text-en-sub">> Afternoon Panels, Evening Town Halls</span></div>
+                    <div class="terminal-box mt-8"><strong class="text-accent-color font-mono block mb-3 text-sm border-b border-gray-700 pb-1">>> SPEAKER_PROTOCOL</strong><p class="text-sm text-gray-300 mb-3 leading-relaxed">每个论坛都将邀请<span class="text-white font-bold">社科人文领域的学者</span>与<span class="text-white font-bold">技术一线的实践者</span>同场对话。</p><div class="bg-white/5 p-2 border-l border-accent-color"><span class="text-xs text-gray-500 font-mono block">[SCHOLARS] + [PRACTITIONERS]<br>= Cross-disciplinary Reality Check</span></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Theme 1 -->
+        <div class="slide">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-8"><span class="tag mb-0">Theme_01</span><span class="font-mono text-xs text-gray-600">Judgment_Protocol_Failure</span></div>
+            <h1 class="text-4xl mb-6">Tech & Judgment / 技术与判断</h1>
+            <div class="grid-2">
+                <div><div class="quote-box"><p class="text-lg">“当判断被系统接管，人还是否需要为结果负责？”</p><span class="text-en-sub">"When judgment is taken over by systems, who is responsible?"</span></div><h3 class="text-accent-color font-mono mt-8 mb-4">>> KEY_QUESTIONS</h3><ul class="console-list"><li>算法如何替代人的决策过程？</li><li>责任的边界在哪里？</li></ul></div>
+                <div class="terminal-box"><h3 class="text-white font-mono border-b border-gray-700 pb-2 mb-4">TARGET_SPEAKERS</h3><div class="mb-6"><strong class="text-accent-color font-mono block mb-1">[PRACTITIONERS]</strong><p class="text-sm text-gray-300">推荐系统架构师、风控模型专家。</p><span class="text-xs text-gray-500">Architects of recommendation systems.</span></div><div><strong class="text-accent-color font-mono block mb-1">[RESEARCHERS]</strong><p class="text-sm text-gray-300">STS学者、科技伦理研究员。</p><span class="text-xs text-gray-500">STS scholars, Tech Ethics researchers.</span></div></div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Theme 2 -->
+        <div class="slide">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-8"><span class="tag mb-0">Theme_02</span><span class="font-mono text-xs text-gray-600">System_Overload_Warning</span></div>
+            <h1 class="text-4xl mb-6">Accelerationism & Shock / 加速主义与冲击</h1>
+            <div class="grid-2">
+                <div><div class="quote-box"><p class="text-lg">“加速之所以成立，不是因为它带来进步，而是因为它把痛苦变成了个人问题。”</p><span class="text-en-sub">"Acceleration is not just about progress; it’s about privatizing pain."</span></div><h3 class="text-accent-color font-mono mt-8 mb-4">>> KEY_QUESTIONS</h3><ul class="console-list"><li>为什么“更快”总是被视为理性的选择？</li><li>痛苦是被结构性制造的，还是个人的无能？</li></ul></div>
+                <div class="terminal-box"><h3 class="text-white font-mono border-b border-gray-700 pb-2 mb-4">TARGET_SPEAKERS</h3><div class="mb-6"><strong class="text-accent-color font-mono block mb-1">[PRACTITIONERS]</strong><p class="text-sm text-gray-300">增长黑客、高压环境创业者。</p><span class="text-xs text-gray-500">Growth hackers, founders.</span></div><div><strong class="text-accent-color font-mono block mb-1">[RESEARCHERS]</strong><p class="text-sm text-gray-300">劳动社会学、倦怠心理学研究者。</p><span class="text-xs text-gray-500">Sociology of labor, burnout experts.</span></div></div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Theme 3 -->
+        <div class="slide">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-8"><span class="tag mb-0">Theme_03</span><span class="font-mono text-xs text-gray-600">Connection_Lost</span></div>
+            <h1 class="text-4xl mb-6">Intimacy, Trust & Algorithm / 亲密关系、信任与算法</h1>
+            <div class="grid-2">
+                <div><div class="quote-box"><p class="text-lg">“当关系可以被排序、推荐和管理，亲密还是一种选择吗？”</p><span class="text-en-sub">"When relationships are ranked and managed, is intimacy still a choice?"</span></div><h3 class="text-accent-color font-mono mt-8 mb-4">>> KEY_QUESTIONS</h3><ul class="console-list"><li>技术重塑了我们的身份，还是将其碎片化了？</li><li>当关系被量化和推荐，我们还是“人”吗？</li></ul></div>
+                <div class="terminal-box"><h3 class="text-white font-mono border-b border-gray-700 pb-2 mb-4">TARGET_SPEAKERS</h3><div class="mb-6"><strong class="text-accent-color font-mono block mb-1">[PRACTITIONERS]</strong><p class="text-sm text-gray-300">社交软件工程师、约会算法开发者。</p><span class="text-xs text-gray-500">Social app engineers, Dating algo devs.</span></div><div><strong class="text-accent-color font-mono block mb-1">[RESEARCHERS]</strong><p class="text-sm text-gray-300">数字生活人类学、性别研究学者。</p><span class="text-xs text-gray-500">Anthropology of digital life.</span></div></div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Theme 4 -->
+        <div class="slide">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-8"><span class="tag mb-0">Theme_04</span><span class="font-mono text-xs text-gray-600">Value_Undefined</span></div>
+            <h1 class="text-4xl mb-6">Labor, Meaning & Automation / 劳动、意义与自动化</h1>
+            <div class="grid-2">
+                <div><div class="quote-box"><p class="text-lg">“当意义取代金钱成为主要激励，劳动真的更自由了吗？”</p><span class="text-en-sub">"When meaning replaces money as incentive, is labor truly freer?"</span></div><h3 class="text-accent-color font-mono mt-8 mb-4">>> KEY_QUESTIONS</h3><ul class="console-list"><li>在自动化时代，如何寻找新的价值模式？</li><li>“为热爱工作”是解放，还是一种更高级的控制？</li></ul></div>
+                <div class="terminal-box"><h3 class="text-white font-mono border-b border-gray-700 pb-2 mb-4">TARGET_SPEAKERS</h3><div class="mb-6"><strong class="text-accent-color font-mono block mb-1">[PRACTITIONERS]</strong><p class="text-sm text-gray-300">AI应用开发者、零工经济设计者。</p><span class="text-xs text-gray-500">AI builders, Gig economy designers.</span></div><div><strong class="text-accent-color font-mono block mb-1">[RESEARCHERS]</strong><p class="text-sm text-gray-300">劳动研究、阶层社会学。</p><span class="text-xs text-gray-500">Labor studies, Sociology.</span></div></div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Theme 5 -->
+        <div class="slide">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-8"><span class="tag mb-0">Theme_05</span><span class="font-mono text-xs text-gray-600">Simulation_China</span></div>
+            <h1 class="text-4xl mb-6">China as the Future of Humanity / 中国作为未来人类的一种范式</h1>
+            <div class="grid-2">
+                <div><div class="quote-box"><p class="text-lg">“如果未来已经发生在某些地方，我们是否真的愿意成为那种人？”</p><span class="text-en-sub">"If the future is already happening here, are we ready to live in it?"</span></div><h3 class="text-accent-color font-mono mt-8 mb-4">>> KEY_QUESTIONS</h3><ul class="console-list"><li>中国作为一种高技术、高动员的未来样本。</li><li>“低资本+高风险”的模式是新常态吗？</li></ul></div>
+                <div class="terminal-box"><h3 class="text-white font-mono border-b border-gray-700 pb-2 mb-4">TARGET_SPEAKERS</h3><div class="mb-6"><strong class="text-accent-color font-mono block mb-1">[OBSERVERS]</strong><p class="text-sm text-gray-300">中国科技与经济的结构分析者。</p><span class="text-xs text-gray-500">Structural analysts of China.</span></div><div><strong class="text-accent-color font-mono block mb-1">[PRACTITIONERS]</strong><p class="text-sm text-gray-300">东亚高强度技术环境中的从业者。</p><span class="text-xs text-gray-500">Practitioners in high-intensity environments.</span></div></div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Outputs -->
+        <div class="slide">
+            <h2>> 产出 / Outputs.dump</h2>
+            <div class="grid grid-cols-3 gap-8 mt-12">
+                <div class="terminal-box"><strong class="text-6xl text-gray-800 font-mono block mb-4 opacity-50">01</strong><h3 class="text-white text-xl mb-2 font-mono">明确的问题</h3><p class="text-xs text-accent-color font-mono mb-4">>> Articulated Questions</p><p class="text-sm text-gray-400">留下一组被清楚表达、可被反复引用的问题，而非简单的结论。</p></div>
+                <div class="terminal-box"><strong class="text-6xl text-gray-800 font-mono block mb-4 opacity-50">02</strong><h3 class="text-white text-xl mb-2 font-mono">可流通的内容</h3><p class="text-xs text-accent-color font-mono mb-4">>> Circulatable Content</p><p class="text-sm text-gray-400">播客、长视频、短视频切片与双语讨论文集。</p></div>
+                <div class="terminal-box"><strong class="text-6xl text-gray-800 font-mono block mb-4 opacity-50">03</strong><h3 class="text-white text-xl mb-2 font-mono">深度连接</h3><p class="text-xs text-accent-color font-mono mb-4">>> Deep Connections</p><p class="text-sm text-gray-400">在共同经历中建立的、基于智性诚实的真实关系。</p></div>
+            </div>
+        </div>
+
+        <!-- Slide 15: Invitation & Benefits -->
+        <div class="slide">
+            <h2>> 嘉宾邀请 / Guest_Invitation</h2>
+            <div class="grid-2">
+                <div class="terminal-box">
+                    <h3 class="text-accent-color border-b border-gray-800 pb-2 mb-6 font-mono text-sm">>> GUEST_BENEFITS_LOG</h3>
+                    <ul class="console-list">
+                        <li><strong class="text-white block mb-1">[TRAVEL_GRANT] 全额差旅支持</strong><p class="text-sm text-gray-400">我们将承担受邀嘉宾的往返机票与营地期间住宿。</p><span class="text-en-sub text-xs">Flight & Hotel Reimbursement Covered.</span></li>
+                        <li><strong class="text-white block mb-1">[NETWORK] 跨界深度建联</strong><p class="text-sm text-gray-400">直接进入 ETH Chiang Mai 核心技术圈层，与顶级开发者共居。</p><span class="text-en-sub text-xs">Connect with top tech builders & communities.</span></li>
+                        <li><strong class="text-white block mb-1">[VISIBILITY] 全网媒体露出</strong><p class="text-sm text-gray-400">基于对谈内容的播客、视频与文集将进行多渠道分发。</p><span class="text-en-sub text-xs">Multi-channel media exposure & content distribution.</span></li>
+                    </ul>
+                </div>
+                <div class="flex flex-col justify-center pl-4">
+                     <div class="quote-box"><p class="text-lg text-white mb-2">"不仅仅是学术圈..."</p><span class="text-en-sub">> Beyond Academia. Calling for diverse thinkers.</span></div>
+                    <div class="mt-6">
+                        <h3 class="text-accent-color font-mono text-sm uppercase mb-4">>> WANTED_ROLES</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white/5 p-3 border-l-2 border-gray-600"><strong class="text-white block text-sm">深度开发者</strong><span class="text-xs text-gray-500 font-mono">Deep Tech Devs</span></div>
+                            <div class="bg-white/5 p-3 border-l-2 border-gray-600"><strong class="text-white block text-sm">媒体/观察者</strong><span class="text-xs text-gray-500 font-mono">Media & Observers</span></div>
+                            <div class="bg-white/5 p-3 border-l-2 border-gray-600"><strong class="text-white block text-sm">青年学者</strong><span class="text-xs text-gray-500 font-mono">Young Scholars</span></div>
+                            <div class="bg-white/5 p-3 border-l-2 border-gray-600"><strong class="text-white block text-sm">咨询/分析师</strong><span class="text-xs text-gray-500 font-mono">Consultants & Analysts</span></div>
+                        </div>
+                    </div>
+                    <div class="mt-8 border-t border-gray-800 pt-4"><div class="flex items-center gap-3"><div class="w-2 h-2 bg-accent-color rounded-full animate-pulse"></div><div><strong class="text-white block text-sm">开放参与机制 / Open Access</strong><p class="text-xs text-gray-400 mt-1">欢迎受邀者根据兴趣，自由参与 <span class="text-accent-color">5大主题论坛</span> 中的任何场次。</p></div></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Organizer Profile -->
+        <div class="slide">
+            <h2>> 主办方资质 / Organizer_Profile</h2>
+            <div class="grid-2">
+                <div class="terminal-box h-full flex flex-col">
+                    <h3 class="text-white text-2xl font-bold mb-2">706 青年空间</h3><span class="text-gray-500 font-mono text-xs block mb-6">706 Youth Space</span>
+                    <div class="space-y-4 flex-grow"><p class="text-gray-300 text-sm leading-relaxed"><span class="text-accent-color font-bold">>> 精神地标:</span> 中国最早、最具影响力的自治青年空间。被誉为“宇宙中心的乌托邦”。</p><p class="text-gray-300 text-sm leading-relaxed"><span class="text-accent-color font-bold">>> 网络规模:</span> 起源于北京五道口，现已发展为遍布全球（柏林、纽约、东京等）的分布式青年网络。</p><p class="text-gray-300 text-sm leading-relaxed"><span class="text-accent-color font-bold">>> 核心使命:</span> 连接孤岛，探索生活的可能性。在原子化时代重建公共生活与深度对话。</p></div>
+                    <div class="mt-4 pt-4 border-t border-gray-800"><span class="text-xs text-gray-500 font-mono">STATUS: OPERATIONAL (12 YEARS)</span></div>
+                </div>
+                <div class="terminal-box h-full flex flex-col">
+                    <h3 class="text-white text-2xl font-bold mb-2">Wamo 瓦猫之夏</h3><span class="text-gray-500 font-mono text-xs block mb-6">Wamo Pop-up City</span>
+                    <div class="space-y-4 flex-grow"><p class="text-gray-300 text-sm leading-relaxed"><span class="text-accent-color font-bold">>> 先锋实验:</span> 亚洲最具活力的 Web3 与数字游民快闪城市实验。</p><p class="text-gray-300 text-sm leading-relaxed"><span class="text-accent-color font-bold">>> 瓦猫精神:</span> 源自大理的文化图腾，代表着一种扎根社区、自由生长、去中心化的生活方式。</p><p class="text-gray-300 text-sm leading-relaxed"><span class="text-accent-color font-bold">>> 行动网络:</span> 汇聚黑客、艺术家、建筑师与社工，共同在一个月内平地构建一座“临时共识之城”。</p></div>
+                    <div class="mt-4 pt-4 border-t border-gray-800"><span class="text-xs text-gray-500 font-mono">STATUS: ACTIVE NODE (CHIANG MAI)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 17 (NEW): Confirmed Guests -->
+        <div class="slide">
+            <h2>> 确认嘉宾 / Confirmed_Guests</h2>
+            
+            <div class="terminal-box h-full overflow-y-auto">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-2">
+                    <h3 class="text-accent-color font-mono text-sm">>> CURRENTLY_IN_CHIANG_MAI</h3>
+                    <span class="text-xs text-gray-500 font-mono">STATUS: CONFIRMED</span>
+                </div>
+                
+                <div class="guest-grid">
+                    <!-- Added Vitalik -->
+                    <div class="guest-card bg-accent-color/10 border-l-4 border-accent-color">
+                        <div class="mb-1">
+                            <span class="guest-name text-accent-color">維塔利克·布特林</span>
+                            <span class="guest-name-en">Vitalik Buterin</span>
+                        </div>
+                        <div class="guest-title text-gray-300">
+                            以太坊联合创始人<br>
+                            <span class="guest-title-en">Co-founder of Ethereum</span>
+                        </div>
+                    </div>
+                    <!-- Fang Kecheng -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">方可成</span>
+                            <span class="guest-name-en">Fang Kecheng</span>
+                        </div>
+                        <div class="guest-title">
+                            新闻实验室 & 过滤气泡主理人<br>
+                            <span class="guest-title-en">Host of News Lab & Filter Bubble</span>
+                        </div>
+                    </div>
+                    <!-- Xiang Biao -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">项飙</span>
+                            <span class="guest-name-en">Xiang Biao</span>
+                        </div>
+                        <div class="guest-title">
+                            德国普朗克社会人类学研究所所长<br>
+                            <span class="guest-title-en">Director, Max Planck Institute for Social Anthropology</span>
+                        </div>
+                    </div>
+                    <!-- Huang Sunquan -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">黄孙权</span>
+                            <span class="guest-name-en">Huang Sunquan</span>
+                        </div>
+                        <div class="guest-title">
+                            中国美术学院网络社会研究所所长<br>
+                            <span class="guest-title-en">Director, Institute of Network Society (CAA)</span>
+                        </div>
+                    </div>
+                    <!-- Xiong Hao -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">熊浩</span>
+                            <span class="guest-name-en">Xiong Hao</span>
+                        </div>
+                        <div class="guest-title">
+                            复旦大学法学院副教授，《奇葩说》辩手<br>
+                            <span class="guest-title-en">Assoc. Prof, Fudan Law School</span>
+                        </div>
+                    </div>
+                    <!-- Sun Zhe -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">孙哲</span>
+                            <span class="guest-name-en">Sun Zhe</span>
+                        </div>
+                        <div class="guest-title">
+                            上海财经大学经济社会学系副教授<br>
+                            <span class="guest-title-en">Assoc. Prof, Dept of Economic Sociology, SUFE</span>
+                        </div>
+                    </div>
+                    <!-- Yao Jianhua -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">姚建华</span>
+                            <span class="guest-name-en">Yao Jianhua</span>
+                        </div>
+                        <div class="guest-title">
+                            复旦大学新闻学院副教授<br>
+                            <span class="guest-title-en">Assoc. Prof, School of Journalism, Fudan Univ</span>
+                        </div>
+                    </div>
+                    <!-- Shi Ke -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">石可</span>
+                            <span class="guest-name-en">Shi Ke</span>
+                        </div>
+                        <div class="guest-title">
+                            南京大学全球人文研究院副教授<br>
+                            <span class="guest-title-en">Assoc. Prof, Institute of Global Humanities, NJU</span>
+                        </div>
+                    </div>
+                    <!-- Helena Rong -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">Helena Rong</span>
+                            <span class="guest-name-en">Helena Rong</span>
+                        </div>
+                        <div class="guest-title">
+                            上海纽约大学互动媒体与商学助理教授<br>
+                            <span class="guest-title-en">Asst. Prof of IMA & Business, NYU Shanghai</span>
+                        </div>
+                    </div>
+                    <!-- Liu Feng -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">刘锋</span>
+                            <span class="guest-name-en">Liu Feng</span>
+                        </div>
+                        <div class="guest-title">
+                            Web3 101主播，BODL Ventures合伙人<br>
+                            <span class="guest-title-en">Host of Web3 101, Partner at BODL Ventures</span>
+                        </div>
+                    </div>
+                    <!-- Wang Chao -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">王超</span>
+                            <span class="guest-name-en">Wang Chao</span>
+                        </div>
+                        <div class="guest-title">
+                            Metropolis DAO联合发起人<br>
+                            <span class="guest-title-en">Co-founder, Metropolis DAO</span>
+                        </div>
+                    </div>
+                    <!-- mashbean -->
+                    <div class="guest-card">
+                        <div class="mb-1">
+                            <span class="guest-name">mashbean豆泥</span>
+                            <span class="guest-name-en">Mashbean</span>
+                        </div>
+                        <div class="guest-title">
+                            分散式科技与数位自主权探索者<br>
+                            <span class="guest-title-en">Digital Sovereignty Researcher</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 18: End -->
+        <div class="slide" style="justify-content: center; align-items: center; text-align: center;">
+             <div class="mb-12"><h1 class="text-5xl font-mono mb-4 text-white">JOIN US_</h1><p class="text-xl text-gray-400 font-mono mt-4">寻找分享者、合作伙伴与赞助商</p></div>
+             <div class="flex gap-12 justify-center w-full">
+                 <div class="text-center group cursor-pointer terminal-box p-6 hover:bg-white/5 border-white"><div class="w-32 h-32 border border-dashed border-gray-500 mb-4 mx-auto flex items-center justify-center text-gray-500 font-mono text-xs group-hover:border-white group-hover:text-white transition-all">[QR CODE]</div><p class="font-mono text-sm text-accent-color">> Apply to Join</p></div>
+                 <div class="text-center group cursor-pointer terminal-box p-6 hover:bg-white/5 border-white"><div class="w-32 h-32 border border-dashed border-gray-500 mb-4 mx-auto flex items-center justify-center text-gray-500 font-mono text-xs group-hover:border-white group-hover:text-white transition-all">[QR CODE]</div><p class="font-mono text-sm text-accent-color">> Contact Us</p></div>
+             </div>
+        </div>
+
+        <!-- REMOVED: Duplicate slide-indicator that was causing the bug -->
+    </div>
+
+    <div class="controls">
+        <button class="btn-control" onclick="prevSlide()">< PREV</button>
+        <button class="btn-control" onclick="nextSlide()">NEXT ></button>
+    </div>
+
+    <script>
+        // Slide Logic
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const slideNumberDisplay = document.getElementById('slideNumber');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+            // Updated to include "PAGE:" prefix consistent with the design
+            slideNumberDisplay.textContent = `PAGE: ${String(currentSlide + 1).padStart(2, '0')} / ${slides.length}`;
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        // --------------------------------------------------------
+        // DATA FLOW PARTICLE SYSTEM (Background)
+        // --------------------------------------------------------
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        const width = 1280;
+        const height = 720;
+        canvas.width = width;
+        canvas.height = height;
+
+        let particles = [];
+        const particleCount = 60; 
+        const connectionDistance = 150;
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 1;
+                this.vy = (Math.random() - 0.5) * 1;
+                this.size = Math.random() > 0.9 ? 3 : 1.5;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < 0) this.x = width; if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = '#00ff41';
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        function initParticles() { particles = []; for (let i = 0; i < particleCount; i++) particles.push(new Particle()); }
+        function animateParticles() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = 'rgba(0, 255, 65, 0.15)'; ctx.lineWidth = 1;
+            for (let i = 0; i < particles.length; i++) {
+                let p1 = particles[i]; p1.update(); p1.draw();
+                for (let j = i; j < particles.length; j++) {
+                    let p2 = particles[j]; let dx = p1.x - p2.x; let dy = p1.y - p2.y; let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < connectionDistance) { ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        initParticles(); animateParticles();
+        
+        // --------------------------------------------------------
+        // MARITIME ISOMETRIC SYSTEM (Slide 3)
+        // --------------------------------------------------------
+        const aoeCanvas = document.getElementById('aoe-canvas');
+        const aCtx = aoeCanvas.getContext('2d');
+        const aWidth = 650;
+        const aHeight = 500;
+        
+        let aFrame = 0;
+        let aPhase = 0; 
+        const aPhaseDuration = 600; // Even Slower
+
+        // Maritime Palette (Dark Sea)
+        const SEA_TOP = "#1e3a8a"; // Dark Blue
+        const SEA_LEFT = "#172554"; // Darker Blue
+        const SEA_RIGHT = "#1e40af"; // Bright Blue
+        
+        // Reefs / Rocks (Boundary)
+        const ROCK_TOP = "#4b5563"; // Gray
+        const ROCK_SIDE = "#374151"; 
+        const ROCK_DARK = "#1f2937";
+        const BARRIER_GLOW = "#ff0055"; // Forbidden Red
+
+        // Gold/Flotsam (Cost)
+        const GOLD_TOP = "#10b981"; // Emerald Green
+        const GOLD_SIDE = "#059669";
+
+        // Unit (Galley) - REFINED
+        const BOAT_HULL = "#3f2c22"; // Dark Wood
+        const BOAT_DECK = "#5d4037";
+        const BOAT_SAIL = "#d1d5db"; // White Sail
+        const BOAT_STRIPE = "#b91c1c"; // Red Stripe
+        const BOAT_OAR = "#78350f";
+
+        // Siren
+        const SIREN_SKIN = "#d8b4fe"; // Purpleish pale
+        const SIREN_HAIR = "#7e22ce"; 
+        const SIREN_TAIL = "#2dd4bf";
+
+        function toIso(x, y) {
+            return {
+                x: (x - y) * 20 + aWidth / 2, // Tile Width 40
+                y: (x + y) * 10 + 100 // Tile Height 20
+            };
+        }
+
+        // Draw Tile
+        function drawIsoTile(x, y, z, type, height=0) {
+            const pos = toIso(x, y);
+            const isoY = pos.y - z * 20 - height;
+            const hw = 20; 
+            const hh = 10; 
+
+            let cTop, cLeft, cRight;
+
+            // Water Animation - Smoother
+            if (type === 'water' || type === 'whirlpool' || type === 'siren_water') {
+                const wave = Math.sin((aFrame * 0.02) + x * 0.5 + y * 0.5);
+                cTop = wave > 0 ? "#1e40af" : "#1e3a8a"; // Subtle glimmer
+                cLeft = SEA_LEFT; cRight = SEA_RIGHT;
+                if (type === 'whirlpool') cTop = "#312e81";
+            } else if (type === 'rock') {
+                cTop = ROCK_TOP; cLeft = ROCK_SIDE; cRight = ROCK_DARK;
+            } else if (type === 'flotsam') {
+                cTop = GOLD_TOP; cLeft = GOLD_SIDE; cRight = GOLD_SIDE;
+            } else {
+                cTop = "#000"; cLeft = "#000"; cRight = "#000"; 
+            }
+
+            // Draw Cube Logic
+            aCtx.fillStyle = cRight; aCtx.beginPath(); aCtx.moveTo(pos.x + hw, isoY + hh); aCtx.lineTo(pos.x + hw, isoY + hh + 10); if (type === 'rock') aCtx.lineTo(pos.x + hw, isoY + hh + 30); aCtx.lineTo(pos.x, isoY + hh * 2 + (type==='rock'?30:10)); aCtx.lineTo(pos.x, isoY + hh * 2); aCtx.closePath(); aCtx.fill();
+            aCtx.fillStyle = cLeft; aCtx.beginPath(); aCtx.moveTo(pos.x - hw, isoY + hh); aCtx.lineTo(pos.x - hw, isoY + hh + (type==='rock'?30:10)); aCtx.lineTo(pos.x, isoY + hh * 2 + (type==='rock'?30:10)); aCtx.lineTo(pos.x, isoY + hh * 2); aCtx.closePath(); aCtx.fill();
+            aCtx.fillStyle = cTop; aCtx.beginPath(); aCtx.moveTo(pos.x, isoY); aCtx.lineTo(pos.x + hw, isoY + hh); aCtx.lineTo(pos.x, isoY + hh * 2); aCtx.lineTo(pos.x - hw, isoY + hh); aCtx.closePath(); aCtx.fill();
+            
+            aCtx.strokeStyle = "rgba(255,255,255,0.05)"; aCtx.lineWidth = 0.5; aCtx.stroke();
+
+            if (type === 'rock' && aPhase === 0) {
+                aCtx.fillStyle = BARRIER_GLOW; aCtx.globalAlpha = 0.3 + Math.sin(aFrame * 0.05) * 0.2; aCtx.beginPath(); aCtx.arc(pos.x, isoY + hh, 5, 0, Math.PI*2); aCtx.fill(); aCtx.globalAlpha = 1.0;
+            }
+
+            // Siren Logic
+            if (type === 'siren_water') {
+                // Rock base
+                drawIsoTile(x, y, 0.5, 'rock');
+                // Siren Sprite
+                const sx = pos.x;
+                const sy = isoY - 20;
+                // Tail
+                aCtx.fillStyle = SIREN_TAIL; aCtx.fillRect(sx-2, sy+5, 6, 8);
+                // Body
+                aCtx.fillStyle = SIREN_SKIN; aCtx.fillRect(sx-2, sy-2, 6, 8);
+                // Hair
+                aCtx.fillStyle = SIREN_HAIR; aCtx.fillRect(sx-3, sy-5, 8, 6);
+                // Singing Note
+                if (Math.floor(aFrame/20)%2===0) {
+                    aCtx.fillStyle = "#fff"; aCtx.fillText("♪", sx+5, sy-5);
+                }
+            }
+        }
+
+        // Draw BIG Galley
+        function drawGalley(gx, gy, gz) {
+            const pos = toIso(gx, gy);
+            const centerX = pos.x;
+            const centerY = pos.y - gz * 20; 
+            
+            const bob = Math.sin(aFrame * 0.05) * 2;
+            const yOffset = centerY + bob;
+
+            // Oars Animation
+            const oarAngle = Math.sin(aFrame * 0.2) * 10;
+
+            // -- Oars (Left) --
+            aCtx.strokeStyle = BOAT_OAR; aCtx.lineWidth = 2;
+            for(let i=-10; i<=10; i+=10) {
+                aCtx.beginPath(); aCtx.moveTo(centerX-5, yOffset+5+i/2); aCtx.lineTo(centerX-25, yOffset+15+i/2 + oarAngle); aCtx.stroke();
+            }
+
+            // -- Hull (Main Body) --
+            aCtx.fillStyle = BOAT_HULL;
+            aCtx.beginPath();
+            aCtx.moveTo(centerX - 25, yOffset - 10); // Stern
+            aCtx.lineTo(centerX + 25, yOffset + 10); // Bow
+            aCtx.lineTo(centerX + 20, yOffset + 20);
+            aCtx.lineTo(centerX - 20, yOffset + 5);
+            aCtx.closePath();
+            aCtx.fill();
+
+            // -- Deck --
+            aCtx.fillStyle = BOAT_DECK;
+            aCtx.beginPath();
+            aCtx.moveTo(centerX - 22, yOffset - 8); 
+            aCtx.lineTo(centerX + 22, yOffset + 8);
+            aCtx.lineTo(centerX + 18, yOffset + 12);
+            aCtx.lineTo(centerX - 18, yOffset - 2);
+            aCtx.closePath();
+            aCtx.fill();
+
+            // -- Mast --
+            aCtx.fillStyle = "#3e2723";
+            aCtx.fillRect(centerX-2, yOffset-40, 4, 40);
+
+            // -- Sail (Striped) --
+            aCtx.fillStyle = BOAT_SAIL;
+            aCtx.beginPath();
+            aCtx.moveTo(centerX, yOffset-38);
+            aCtx.lineTo(centerX+20, yOffset-20);
+            aCtx.lineTo(centerX-15, yOffset-20);
+            aCtx.closePath();
+            aCtx.fill();
+            // Stripe
+            aCtx.strokeStyle = BOAT_STRIPE; aCtx.lineWidth = 3;
+            aCtx.beginPath(); aCtx.moveTo(centerX+2, yOffset-35); aCtx.lineTo(centerX+2, yOffset-22); aCtx.stroke();
+
+            // -- Eye on Bow --
+            aCtx.fillStyle = "#fff"; aCtx.beginPath(); aCtx.arc(centerX+18, yOffset+12, 2, 0, Math.PI*2); aCtx.fill();
+            aCtx.fillStyle = "#000"; aCtx.beginPath(); aCtx.arc(centerX+18, yOffset+12, 1, 0, Math.PI*2); aCtx.fill();
+
+            // -- Oars (Right) --
+            aCtx.strokeStyle = BOAT_OAR;
+            for(let i=-10; i<=10; i+=10) {
+                aCtx.beginPath(); aCtx.moveTo(centerX+5, yOffset+10+i/2); aCtx.lineTo(centerX+25, yOffset+25+i/2 - oarAngle); aCtx.stroke();
+            }
+        }
+
+        function animateAoE() {
+            aCtx.clearRect(0, 0, aWidth, aHeight);
+            
+            if (aFrame % aPhaseDuration === 0) {
+                aPhase = Math.floor(aFrame / aPhaseDuration) % 4;
+                updateAoEPhase(aPhase);
+            }
+
+            const mapSize = 12;
+            
+            // Movement - Float Interpolation
+            let uX = 0, uY = 0;
+            const prog = (aFrame % aPhaseDuration) / aPhaseDuration;
+
+            if (aPhase === 0) { // Boundary
+                let move = prog * 8;
+                uX = move > 5 ? 5 : move; 
+                uY = 6;
+            } else if (aPhase === 1) { // Cost
+                uX = prog * 10;
+                uY = uX;
+            } else if (aPhase === 2) { // Restraint
+                uX = prog * 10;
+                uY = 4;
+                // Curve away from Siren
+                if (uX > 3 && uX < 8) uY = 2 + Math.sin(uX)*0.5; 
+            } else { // Sobriety
+                uX = 6; uY = 6;
+            }
+
+            // Render loop
+            for (let sum = 0; sum <= (mapSize-1)*2; sum++) {
+                for (let x = 0; x < mapSize; x++) {
+                    let y = sum - x;
+                    if (y < 0 || y >= mapSize) continue;
+
+                    let type = 'water';
+                    let z = 0;
+
+                    if (aPhase === 0 && x === 7) type = 'rock'; 
+                    if (aPhase === 1 && (x+y)%3===0 && Math.abs(x-uX)>1) type = 'flotsam'; 
+                    if (aPhase === 2) {
+                        if (x === 6 && y === 6) type = 'siren_water'; 
+                    }
+
+                    drawIsoTile(x, y, z, type);
+
+                    // Draw Boat - Render after tile to appear on top
+                    // Simple z-sort check: if boat is "in" this tile roughly
+                    if (Math.round(uX) === x && Math.round(uY) === y) {
+                        drawGalley(uX, uY, z);
+                    }
+                }
+            }
+
+            aFrame++;
+            requestAnimationFrame(animateAoE);
+        }
+
+        function updateAoEPhase(phase) {
+            const statusEl = document.getElementById('iso-status');
+            const captionEl = document.querySelector('#iso-caption p:last-child');
+            const boxes = document.querySelectorAll('.weight-box');
+            boxes.forEach(b => b.classList.remove('active'));
+            if(boxes[phase]) boxes[phase].classList.add('active');
+
+            const texts = [
+                { t: "AGE: BOUNDARY", c: "禁止穿越的线：暗礁阻挡了捷径。" },
+                { t: "AGE: COST", c: "把代价说清楚：碎片散落，行进艰难。" },
+                { t: "AGE: RESTRAINT", c: "避免失控：避开塞壬的诱惑歌声。" },
+                { t: "AGE: SOBRIETY", c: "清醒：在迷雾中重建航海坐标。" }
+            ];
+            statusEl.innerText = texts[phase].t;
+            captionEl.innerText = texts[phase].c;
+        }
+
+        // --------------------------------------------------------
+        // LOCATION MAP SYSTEM (Slide 6)
+        // --------------------------------------------------------
+        const locCanvas = document.getElementById('location-canvas');
+        const lCtx = locCanvas.getContext('2d');
+        const lWidth = 800;
+        const lHeight = 500;
+        let lFrame = 0;
+
+        // Map Coordinates (Abstracted relative to center)
+        // Center (0,0) = Old City Center
+        // Old City Box = -100, -100 to 100, 100
+        const OLD_CITY_SIZE = 200;
+        
+        function drawTacticalMap() {
+            lCtx.clearRect(0, 0, lWidth, lHeight);
+            
+            const centerX = lWidth / 2 + 50; // Shift right a bit
+            const centerY = lHeight / 2;
+
+            // 1. Draw Grid
+            lCtx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+            lCtx.lineWidth = 1;
+            for(let i=0; i<lWidth; i+=40) { lCtx.beginPath(); lCtx.moveTo(i,0); lCtx.lineTo(i,lHeight); lCtx.stroke(); }
+            for(let j=0; j<lHeight; j+=40) { lCtx.beginPath(); lCtx.moveTo(0,j); lCtx.lineTo(lWidth,j); lCtx.stroke(); }
+
+            // 2. Draw Mountain (Doi Suthep) - West (Left)
+            lCtx.fillStyle = "rgba(0, 50, 0, 0.3)";
+            lCtx.strokeStyle = "#064e3b";
+            lCtx.beginPath();
+            lCtx.moveTo(0, centerY);
+            for(let i=0; i<300; i+=10) {
+                lCtx.lineTo(i, centerY - Math.random()*20 - (300-i)*0.5);
+            }
+            lCtx.lineTo(300, 0);
+            lCtx.lineTo(0,0);
+            lCtx.fill();
+            // Label
+            lCtx.fillStyle = "#064e3b";
+            lCtx.font = "10px JetBrains Mono";
+            lCtx.fillText("DOI SUTHEP MOUNTAIN RANGE", 20, 40);
+
+            // 3. Draw Old City (The Moat)
+            const ocX = centerX - OLD_CITY_SIZE/2;
+            const ocY = centerY - OLD_CITY_SIZE/2;
+            
+            lCtx.strokeStyle = "#3b82f6"; // Blue
+            lCtx.lineWidth = 3;
+            lCtx.strokeRect(ocX, ocY, OLD_CITY_SIZE, OLD_CITY_SIZE);
+            
+            // Moat Water Effect
+            lCtx.fillStyle = "rgba(59, 130, 246, 0.1)";
+            lCtx.fillRect(ocX, ocY, OLD_CITY_SIZE, OLD_CITY_SIZE);
+
+            // 4. Draw Locations
+            // Nimman (NW of Old City)
+            const nimX = ocX - 80;
+            const nimY = ocY + 20;
+            drawMapMarker(nimX, nimY, "NIMMAN (HUB)", "#00ff41", true);
+
+            // CMU (West of Nimman)
+            const cmuX = nimX - 100;
+            const cmuY = nimY - 20;
+            drawMapMarker(cmuX, cmuY, "CMU", "#a855f7", false);
+
+            // Airport (SW)
+            const airX = ocX - 60;
+            const airY = ocY + OLD_CITY_SIZE + 80;
+            drawMapMarker(airX, airY, "AIRPORT", "#64748b", false);
+
+            // Market (East)
+            const mktX = ocX + OLD_CITY_SIZE + 40;
+            const mktY = ocY + 50;
+            drawMapMarker(mktX, mktY, "NIGHT MARKETS", "#f59e0b", false); // Orange/Gold
+
+            // Old City Label
+            lCtx.fillStyle = "#3b82f6";
+            lCtx.fillText("OLD CITY", centerX - 30, centerY);
+
+            // 5. Connecting Lines (Network)
+            lCtx.strokeStyle = "rgba(255,255,255,0.1)";
+            lCtx.setLineDash([5, 5]);
+            lCtx.beginPath();
+            lCtx.moveTo(nimX, nimY); lCtx.lineTo(cmuX, cmuY);
+            lCtx.moveTo(nimX, nimY); lCtx.lineTo(ocX, ocY+20);
+            lCtx.moveTo(ocX, ocY+OLD_CITY_SIZE); lCtx.lineTo(airX, airY);
+            lCtx.stroke();
+            lCtx.setLineDash([]);
+
+            // Airport to Nimman Path
+            lCtx.strokeStyle = "#00ff41";
+            lCtx.lineWidth = 2;
+            lCtx.setLineDash([2, 2]);
+            lCtx.beginPath();
+            lCtx.moveTo(airX, airY);
+            lCtx.lineTo(nimX, nimY); // Direct line approximation
+            lCtx.stroke();
+            
+            // Label on line
+            lCtx.fillStyle = "#fff";
+            lCtx.font = "10px JetBrains Mono";
+            lCtx.fillText("15 MIN DRIVE", (airX+nimX)/2 - 30, (airY+nimY)/2);
+
+            lFrame++;
+            requestAnimationFrame(drawTacticalMap);
+        }
+
+        function drawMapMarker(x, y, label, color, pulse) {
+            // Marker
+            lCtx.fillStyle = color;
+            lCtx.beginPath();
+            lCtx.arc(x, y, 4, 0, Math.PI*2);
+            lCtx.fill();
+
+            // Label
+            lCtx.font = "12px JetBrains Mono";
+            lCtx.fillText(label, x + 10, y + 4);
+
+            // Pulse Effect
+            if (pulse) {
+                const r = (lFrame % 60) * 0.5;
+                const alpha = 1 - (lFrame % 60) / 60;
+                lCtx.strokeStyle = color;
+                lCtx.globalAlpha = alpha;
+                lCtx.beginPath();
+                lCtx.arc(x, y, r, 0, Math.PI*2);
+                lCtx.stroke();
+                lCtx.globalAlpha = 1.0;
+            }
+        }
+
+        animateAoE();
+        drawTacticalMap(); // Start Map
+        updateSlide();
+        scaleDeck();
+        window.addEventListener('resize', scaleDeck);
+        
+        function scaleDeck() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const deckWidth = 1280;
+            const deckHeight = 720;
+            
+            const scaleX = windowWidth / deckWidth;
+            const scaleY = windowHeight / deckHeight;
+            const scale = Math.min(scaleX, scaleY, 1); 
+
+            const container = document.getElementById('deck-container');
+            if (windowWidth < deckWidth || windowHeight < deckHeight) {
+                container.style.transform = `scale(${scale * 0.95})`; 
+            } else {
+                container.style.transform = `scale(1)`;
+            }
+        }
+    </script>
+</body>
+</html>
